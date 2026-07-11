@@ -1,0 +1,35 @@
+{
+  "A3_equilibrium_residual": 3.204937810639273e-17,
+  "A4_trace_err": 1.7027934617885876e-11,
+  "A5_prod_drift": 4.359938336288449e-14,
+  "A5_fbar_max": 1.734723475976807e-17,
+  "A6_period": 10.884500000000001,
+  "A6_period_target": 10.882796185405306,
+  "exp1": {
+    "amp_A": 5.997173658200146e-07,
+    "amp_B": 0.6002118215924659,
+    "mass_drift": 3.3306690738754696e-16,
+    "min_coord": 0.027409253653367643
+  },
+  "exp2": {
+    "cases": 10000,
+    "match_frac_all": 0.9758,
+    "match_frac_far_from_boundary": 0.9926539058458355,
+    "eps_settle": 0.02
+  },
+  "exp3": {
+    "demo_active_types": 2,
+    "demo_a_survivors": [
+      0.4653850199469955,
+      1.6353664440613769
+    ],
+    "mu": 1.6062727366560916,
+    "lam": 0.6772074839437313,
+    "replicator_selects_barbell": true,
+    "sweep_cases": 5000,
+    "frac_le2_active": 1.0,
+    "dual_certificate_all_ok": true
+  },
+  "seconds": 169.0,
+  "status": "ALL CHECKS PASS (A1-A7, B1-B5)"
+}

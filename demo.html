@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Self-replicating markets: stable, or boom–bust?</title>
+<style>
+  :root{ --ink:#1a1a1a; --mut:#6b6b6b; --line:#d9d9d9; --A:#2c7fb8; --B:#d95f0e;
+         --stable:#2c7fb8; --cycle:#d95f0e; --bg:#ffffff; --panel:#fafafa; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        color:var(--ink); background:var(--bg); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:28px 20px 48px; }
+  h1{ font-size:23px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub{ color:var(--mut); margin:0 0 22px; max-width:70ch; }
+  .panels{ display:flex; gap:18px; flex-wrap:wrap; }
+  .panel{ flex:1 1 380px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .panel h2{ font-size:13px; font-weight:600; color:var(--mut); text-transform:uppercase;
+             letter-spacing:.06em; margin:0 0 10px; }
+  canvas{ width:100%; height:auto; display:block; border-radius:8px; }
+  .controls{ margin:22px 0 6px; padding:16px 18px; border:1px solid var(--line); border-radius:12px; }
+  .row{ display:flex; align-items:center; gap:14px; margin:10px 0; }
+  .row label{ width:290px; flex:none; }
+  .row label b{ font-variant-numeric:tabular-nums; }
+  input[type=range]{ flex:1; accent-color:var(--ink); }
+  .verdict{ margin-top:14px; padding:12px 16px; border-radius:10px; font-weight:600;
+            display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .verdict.stable{ background:#eaf2f8; color:#1f5f8b; }
+  .verdict.cycle{ background:#fbeadd; color:#a5480c; }
+  .verdict .big{ font-size:18px; }
+  .verdict .eq{ font-weight:400; font-variant-numeric:tabular-nums; opacity:.85; }
+  .presets{ display:flex; gap:8px; margin-top:8px; }
+  button{ font:inherit; padding:7px 13px; border:1px solid var(--line); background:#fff;
+          border-radius:8px; cursor:pointer; }
+  button:hover{ background:#f0f0f0; }
+  .foot{ color:var(--mut); font-size:13px; margin-top:26px; max-width:75ch; }
+  .foot a{ color:var(--ink); }
+  code{ background:#f0f0f0; padding:1px 5px; border-radius:4px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>When self-replicating agents run a market, does the price settle — or cycle forever?</h1>
+  <p class="sub">Three AI strategy types compete in a loop (each undercuts another) for a shared
+  resource, reproducing in proportion to their return. Drag the sliders. The dynamics are the
+  replicator–mutator equation on a biased Rock–Paper–Scissors payoff; the stability boundary
+  <code>κ = −6μ</code> below is a machine-checked theorem, not a fit.</p>
+
+  <div class="panels">
+    <div class="panel">
+      <h2>Market composition (who holds what share)</h2>
+      <canvas id="simplex" width="440" height="380"></canvas>
+    </div>
+    <div class="panel">
+      <h2>Market price over time</h2>
+      <canvas id="price" width="440" height="380"></canvas>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <label>Anchoring&nbsp; <b id="klab">κ = +0.20</b><br>
+        <span style="color:var(--mut);font-size:13px">← positional / relative &nbsp;·&nbsp; fundamental / anchored →</span></label>
+      <input type="range" id="k" min="-0.5" max="0.5" step="0.005" value="0.2"/>
+    </div>
+    <div class="row">
+      <label>Entry rate&nbsp; <b id="mlab">μ = 0.020</b><br>
+        <span style="color:var(--mut);font-size:13px">rate at which new variants enter</span></label>
+      <input type="range" id="m" min="0" max="0.1" step="0.001" value="0.02"/>
+    </div>
+    <div id="verdict" class="verdict stable"></div>
+    <div class="presets">
+      <button data-k="0.2"  data-m="0.02">Anchored market</button>
+      <button data-k="-0.4" data-m="0.02">Positional market</button>
+      <button data-k="0.0"  data-m="0.0">Pure zero-sum (the knife's edge)</button>
+      <button id="reset">Reset trajectory</button>
+    </div>
+  </div>
+
+  <p class="foot">Proof-carrying demo. The update rule is transcribed from the Lean&nbsp;4 kernel
+  (<a href="https://github.com/selfreferencing/TSE_Formal">TSE_Formal</a>): the barycentre is an
+  equilibrium, the linearisation trace is exactly <code>−κ/3 − 2μ</code>, and the supercritical
+  Hopf sits on <code>κ = −6μ</code> — all machine-checked. Above that line the market spirals to a
+  stable price; below it, self-replication produces perpetual boom–bust with no external shock.
+  From K. Vallier, <i>The Theory of Strategic Evolution</i> (arXiv:2512.07901).</p>
+</div>
+
+<script>
+"use strict";
+// ---- model (verbatim from SEKernel/Law7_Hopf.lean) ----
+function fit(k,x){ // f_i = (Pi(k) x)_i
+  return [ 0*x[0] + -1*x[1] + (1+k)*x[2],
+           (1+k)*x[0] + 0*x[1] + -1*x[2],
+           -1*x[0] + (1+k)*x[1] + 0*x[2] ];
+}
+function meanfit(k,x){ const f=fit(k,x); return x[0]*f[0]+x[1]*f[1]+x[2]*f[2]; }
+function rm(k,mu,x){ const f=fit(k,x), fb=meanfit(k,x);
+  return [ x[0]*(f[0]-fb)+mu*(1/3-x[0]),
+           x[1]*(f[1]-fb)+mu*(1/3-x[1]),
+           x[2]*(f[2]-fb)+mu*(1/3-x[2]) ]; }
+function add(a,b,s){ return [a[0]+s*b[0], a[1]+s*b[1], a[2]+s*b[2]]; }
+function rk4(k,mu,x,dt){
+  const a=rm(k,mu,x), b=rm(k,mu,add(x,a,dt/2)), c=rm(k,mu,add(x,b,dt/2)), d=rm(k,mu,add(x,c,dt));
+  let y=[ x[0]+dt/6*(a[0]+2*b[0]+2*c[0]+d[0]),
+          x[1]+dt/6*(a[1]+2*b[1]+2*c[1]+d[1]),
+          x[2]+dt/6*(a[2]+2*b[2]+2*c[2]+d[2]) ];
+  const s=y[0]+y[1]+y[2]; return [y[0]/s, y[1]/s, y[2]/s];
+}
+// ---- state ----
+let K=0.2, MU=0.02, dt=0.02;
+let x=[0.5,0.3,0.2];
+const trail=[];                       // simplex trail (2D pts)
+const priceHist=[];                   // price series
+const P0=1.0;
+function price(k,x){ return P0 + meanfit(k,x); }
+
+// ---- geometry ----
+const V=[[0,0],[1,0],[0.5,Math.sqrt(3)/2]];
+function bary(x){ return [ x[0]*V[0][0]+x[1]*V[1][0]+x[2]*V[2][0],
+                           x[0]*V[0][1]+x[1]*V[1][1]+x[2]*V[2][1] ]; }
+
+const cs=document.getElementById('simplex'), cp=document.getElementById('price');
+let SG,PG,SW=0,SH=0,PW=0,PH=0;
+function sizeCanvas(c){ const dpr=window.devicePixelRatio||1, w=c.clientWidth, h=Math.round(c.clientWidth*380/440);
+  c.width=w*dpr; c.height=h*dpr; c.style.height=h+'px';
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); return [g,w,h]; }
+function resize(){ [SG,SW,SH]=sizeCanvas(cs); [PG,PW,PH]=sizeCanvas(cp); }
+window.addEventListener('resize', resize);
+
+function drawSimplex(){
+  const g=SG,w=SW,h=SH; g.clearRect(0,0,w,h);
+  const pad=34, S=Math.min(w-2*pad, h-2*pad), ox=(w-S)/2, oy=h-pad;
+  const map=p=>[ ox + p[0]*S, oy - p[1]*S ];
+  // triangle
+  g.strokeStyle='#cfcfcf'; g.lineWidth=1; g.beginPath();
+  const t=V.map(map); g.moveTo(...t[0]); g.lineTo(...t[1]); g.lineTo(...t[2]); g.closePath(); g.stroke();
+  // centre
+  const ctr=map(bary([1/3,1/3,1/3]));
+  g.fillStyle='#999'; g.beginPath(); g.arc(ctr[0],ctr[1],2.5,0,7); g.fill();
+  // trail
+  const cyc = (K < -6*MU);
+  g.lineWidth=1.4;
+  for(let i=1;i<trail.length;i++){
+    const a=map(trail[i-1]), b=map(trail[i]);
+    g.strokeStyle = cyc ? 'rgba(217,95,14,'+(0.15+0.85*i/trail.length)+')'
+                        : 'rgba(44,127,184,'+(0.15+0.85*i/trail.length)+')';
+    g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke();
+  }
+  // head
+  const hd=map(bary(x));
+  g.fillStyle = cyc ? '#d95f0e' : '#2c7fb8';
+  g.beginPath(); g.arc(hd[0],hd[1],4,0,7); g.fill();
+}
+
+function drawPrice(){
+  const g=PG,w=PW,h=PH; g.clearRect(0,0,w,h);
+  const pad=34; const N=priceHist.length; if(N<2) return;
+  let lo=Infinity,hi=-Infinity; for(const v of priceHist){ if(v<lo)lo=v; if(v>hi)hi=v; }
+  const c=(lo+hi)/2, half=Math.max(0.09,(hi-lo)/2*1.25); lo=c-half; hi=c+half;
+  const X=i=> pad + i/(priceHist.length-1)*(w-1.4*pad);
+  const Y=v=> (h-pad) - (v-lo)/(hi-lo)*(h-2*pad);
+  // axes
+  g.strokeStyle='#e4e4e4'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(pad,pad-8); g.lineTo(pad,h-pad); g.lineTo(w-0.4*pad,h-pad); g.stroke();
+  g.fillStyle='#9a9a9a'; g.font='11px sans-serif';
+  g.fillText(hi.toFixed(3), 3, Y(hi)+4); g.fillText(lo.toFixed(3), 3, Y(lo)+4);
+  g.fillText('time', w-0.4*pad-24, h-pad+16);
+  // curve
+  const cyc = (K < -6*MU);
+  g.strokeStyle = cyc ? '#d95f0e' : '#2c7fb8'; g.lineWidth=1.6; g.beginPath();
+  for(let i=0;i<priceHist.length;i++){ const px2=X(i),py2=Y(priceHist[i]); i?g.lineTo(px2,py2):g.moveTo(px2,py2); }
+  g.stroke();
+}
+
+function updateVerdict(){
+  const tr = -K/3 - 2*MU;
+  const cyc = (K < -6*MU);
+  const v=document.getElementById('verdict');
+  v.className = 'verdict ' + (cyc?'cycle':'stable');
+  v.innerHTML = '<span class="big">'+(cyc?'CYCLING — perpetual boom &amp; bust':'STABLE — price settles')+'</span>'
+    + '<span class="eq">trace = −κ/3 − 2μ = '+tr.toFixed(3)+' &nbsp;('+(tr<0?'&lt; 0 stable':'&gt; 0 unstable')
+    + ') &nbsp;·&nbsp; boundary κ = −6μ = '+(-6*MU).toFixed(3)+'</span>';
+}
+
+// ---- loop (throttled ~30fps, paused when tab hidden) ----
+let last=0;
+function step(ts){
+  requestAnimationFrame(step);
+  if(ts-last < 30) return;
+  last=ts;
+  for(let s=0;s<6;s++){                 // integrator steps per frame
+    x=rk4(K,MU,x,dt);
+    trail.push(bary(x)); if(trail.length>1400) trail.shift();
+    priceHist.push(price(K,x)); if(priceHist.length>900) priceHist.shift();
+  }
+  drawSimplex(); drawPrice();
+}
+
+// ---- wiring ----
+const kEl=document.getElementById('k'), mEl=document.getElementById('m');
+const kLab=document.getElementById('klab'), mLab=document.getElementById('mlab');
+function sync(){ K=+kEl.value; MU=+mEl.value;
+  kLab.textContent='κ = '+(K>=0?'+':'')+K.toFixed(2);
+  mLab.textContent='μ = '+MU.toFixed(3); updateVerdict(); }
+kEl.oninput=sync; mEl.oninput=sync;
+function resetTraj(){ x=[0.5,0.3,0.2]; trail.length=0; priceHist.length=0; }
+document.getElementById('reset').onclick=resetTraj;
+document.querySelectorAll('.presets button[data-k]').forEach(b=>{
+  b.onclick=()=>{ kEl.value=b.dataset.k; mEl.value=b.dataset.m; sync(); resetTraj(); };
+});
+function warmup(){ for(let s=0;s<160;s++){ x=rk4(K,MU,x,dt);
+  trail.push(bary(x)); priceHist.push(price(K,x)); } drawSimplex(); drawPrice(); }
+resize(); sync(); warmup(); requestAnimationFrame(step);
+</script>
+</body>
+</html>
