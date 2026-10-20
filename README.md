@@ -1,4 +1,4 @@
-# TSE_Sim — proof-carrying simulations of self-replicating markets
+# TSE_Sim: proof-carrying simulations of self-replicating markets
 
 Simulations of the **Theory of Strategic Evolution** (Kevin Vallier,
 [arXiv:2512.07901](https://arxiv.org/abs/2512.07901)). The dynamical results the
@@ -17,7 +17,7 @@ assume (here), fit to data, or measure once.
 |---|---|
 | [`SPEC.md`](SPEC.md) | The frozen contract: equations by name from the kernel, the experiments, and the theorem-asserts (A1–A7, B1–B5). |
 | [`sim.py`](sim.py) | One NumPy file. Transcribes the kernel dynamics, bakes the theorems in as asserts, runs the experiments, writes `summary.json`. |
-| [`demo.html`](demo.html) | Self-contained interactive artifact — drag κ and μ, watch the market tip from a stable price to perpetual boom–bust live. Open it in any browser. |
+| [`demo.html`](demo.html) | Self-contained interactive artifact: drag κ and μ, watch the market tip from a stable price to perpetual boom–bust live. Open it in any browser. |
 | `fig1_contrast.png` | Headline: anchored market settles vs positional market cycles forever. |
 | `fig2_phase.png` | 10,000-case phase diagram; empirical settle/cycle boundary vs the proven line `κ = −6μ`. |
 | `fig3_barbell.png` | Law 2: a market with two shared constraints collapses to ≤2 types (planners + executors). |
@@ -46,7 +46,7 @@ python sim.py --smoke    # fast: asserts + tiny sweeps
 python sim.py --barbell  # just Law 2
 ```
 A clean run prints `ALL CHECKS PASS (A1-A7, B1-B5)`. Any theorem violation
-aborts at the named assert — because it would mean a code bug, not a discovery.
+aborts at the named assert, because it would mean a code bug, not a discovery.
 
 For the interactive demo, just open `demo.html` in a browser.
 
