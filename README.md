@@ -1,17 +1,15 @@
 # TSE_Sim — proof-carrying simulations of self-replicating markets
 
 Simulations of the **Theory of Strategic Evolution** (Kevin Vallier,
-[arXiv:2512.07901](https://arxiv.org/abs/2512.07901)) in which every dynamical
-claim the code rests on is a **machine-checked theorem** from the Lean 4
-kernel [`TSE_Formal`](https://github.com/selfreferencing/TSE_Formal). The
-simulator does not *test* the theory — it *inherits* it: the theorems are
-transcribed as runtime `assert`s, so the code self-verifies and the sweeps
-merely explore the quantitative regime the theorems bound.
+[arXiv:2512.07901](https://arxiv.org/abs/2512.07901)). The dynamical results the
+code relies on are proved in the Lean 4 development
+[`TSE_Formal`](https://github.com/selfreferencing/TSE_Formal) and are checked in
+the code as runtime `assert`s; the sweeps explore the range those results bound.
 
 No LLM runs inside the loop. A strategic replicator is a point on a simplex
 evolving by deterministic arithmetic; the agents are not minds. The entire
-empirical content lives in one function — the fitness/return map — which you
-assume (here), fit to data, or measure once. Everything downstream is free.
+empirical content lives in one function, the fitness/return map, which you
+assume (here), fit to data, or measure once.
 
 ## What's here
 
@@ -55,9 +53,8 @@ For the interactive demo, just open `demo.html` in a browser.
 ## Provenance
 
 Kernel: [`selfreferencing/TSE_Formal`](https://github.com/selfreferencing/TSE_Formal)
-(73 cold-verified theorems, zero custom axioms). Paper:
-[`selfreferencing/TSE_Paper`](https://github.com/selfreferencing/TSE_Paper) /
-[arXiv:2512.07901](https://arxiv.org/abs/2512.07901). The constants this
-simulation relies on — the boundary `κ = −6μ`, the trace `−κ/3 − 2μ`, the
-eigenvalues, the frequency `1/√3`, the ≤2-type sparsity bound — are all proven
-there.
+(240 theorems in the elaborated environment, 141 of them audited headline
+results; no custom axioms). Paper: [arXiv:2512.07901](https://arxiv.org/abs/2512.07901).
+The constants this simulation relies on are proved in TSE_Formal: the boundary
+`κ = −6μ`, the trace `−κ/3 − 2μ`, the eigenvalues, the frequency `1/√3`, and the
+≤2-type sparsity bound.
